@@ -12,17 +12,22 @@ async def check_endpoint_capabilities(model: str, streaming_support_cache: dict)
     """
     Check if endpoint supports streaming and trace data.
     Returns (supports_streaming, supports_trace)
+    
+    Note: This function uses WorkspaceClient() which relies on default Databricks
+    authentication. In Databricks Apps, this should work automatically. If auth
+    fails, we return safe defaults (True, False) to allow the chat to proceed.
     """
-    client = WorkspaceClient()
-    current_time = datetime.now()
-    cache_entry = streaming_support_cache['endpoints'].get(model)
-    
-    # If cache entry exists and is less than 24 hours old, use cached value
-    if cache_entry and (current_time - cache_entry['last_checked']) < timedelta(days=1):
-        return cache_entry['supports_streaming'], cache_entry['supports_trace']
-    
-    # Cache expired or doesn't exist - fetch fresh data
     try:
+        current_time = datetime.now()
+        cache_entry = streaming_support_cache['endpoints'].get(model)
+        
+        # If cache entry exists and is less than 24 hours old, use cached value
+        if cache_entry and (current_time - cache_entry['last_checked']) < timedelta(days=1):
+            return cache_entry['supports_streaming'], cache_entry['supports_trace']
+        
+        # Cache expired or doesn't exist - fetch fresh data
+        # WorkspaceClient() uses default auth (auto-injected in Databricks Apps)
+        client = WorkspaceClient()
         endpoint = client.serving_endpoints.get(model)
         supports_trace = any(
             entity.name == 'feedback'
@@ -38,7 +43,11 @@ async def check_endpoint_capabilities(model: str, streaming_support_cache: dict)
         return True, supports_trace
         
     except Exception as e:
-        # If error occurs, return default values
+        # If any error occurs (auth failure, network issue, etc.), return safe defaults
+        # This allows the chat to proceed even if capability detection fails
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to check endpoint capabilities for {model}: {str(e)}. Using defaults.")
         return True, False
     
 async def get_user_info(request: Request = None) -> dict:
