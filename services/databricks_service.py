@@ -10,40 +10,23 @@ logger = logging.getLogger(__name__)
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
+assert os.getenv('DATABRICKS_WAREHOUSE_ID'), "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
+
+cfg = Config()
+
 
 class DatabricksService:
     """Service for handling all Databricks SQL Warehouse queries"""
     
     def __init__(self):
-        self.host = os.getenv("DATABRICKS_HOST")
-        self.warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
-        self._config = None
-        
-        if not self.warehouse_id:
-            logger.warning("DATABRICKS_WAREHOUSE_ID not set - service will return empty results")
-    
-    def _get_config(self) -> Config:
-        """Get Databricks configuration with lazy initialization to avoid import-time errors"""
-        if self._config is None:
-            try:
-                self._config = Config()
-                logger.info(f"Databricks Config initialized successfully for host: {self._config.host}")
-            except ValueError as e:
-                logger.error(f"Failed to initialize Databricks Config: {e}")
-                raise
-        return self._config
+        pass
     
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results as list of dictionaries"""
-        if not self.warehouse_id:
-            logger.warning("No warehouse ID configured - returning empty results")
-            return []
-        
         try:
-            cfg = self._get_config()
             with sql.connect(
                 server_hostname=cfg.host,
-                http_path=f"/sql/1.0/warehouses/{self.warehouse_id}",
+                http_path=f"/sql/1.0/warehouses/{cfg.warehouse_id}",
                 credentials_provider=lambda: cfg.authenticate
             ) as connection:
                 with connection.cursor() as cursor:
