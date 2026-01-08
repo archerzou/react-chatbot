@@ -66,6 +66,7 @@ class UserInfo(BaseModel):
     email: Optional[str] = None
     user_id: Optional[str] = None
     username: Optional[str] = None
+    access_token: Optional[str] = None
 
 # Initialize services
 databricks_service = DatabricksService()
@@ -98,6 +99,8 @@ async def get_user_info(request: Request) -> UserInfo:
     email = request.headers.get("X-Forwarded-Email")
     user_id = request.headers.get("X-Forwarded-User")
     username = request.headers.get("X-Forwarded-Preferred-Username", "")
+    # Get user's access token for Databricks API calls (user authorization)
+    access_token = request.headers.get("X-Forwarded-Access-Token")
     
     if username:
         username = username.split("@")[0]
@@ -107,13 +110,15 @@ async def get_user_info(request: Request) -> UserInfo:
         return UserInfo(
             email="test@example.com",
             user_id="test_user",
-            username="test_user"
+            username="test_user",
+            access_token=access_token
         )
     
     return UserInfo(
         email=email,
         user_id=user_id,
-        username=username
+        username=username,
+        access_token=access_token
     )
 
 # API Routes
@@ -150,7 +155,15 @@ async def search_clients(
                 detail="At least one search parameter is required (client_name, client_nhi, or date range)"
             )
         
+        # Check if user has access token (required for Databricks queries)
+        if not user_info.access_token:
+            raise HTTPException(
+                status_code=401,
+                detail="User access token not available. Please ensure you are logged in."
+            )
+        
         results = databricks_service.search_clients(
+            user_token=user_info.access_token,
             client_name=request.client_name,
             client_nhi=request.client_nhi,
             start_date=request.start_date,
@@ -174,7 +187,14 @@ async def get_report_data(
     try:
         logger.info(f"Report data request from user {user_info.user_id} for client {client_id}")
         
-        report_data = databricks_service.get_report_data(client_id)
+        # Check if user has access token (required for Databricks queries)
+        if not user_info.access_token:
+            raise HTTPException(
+                status_code=401,
+                detail="User access token not available. Please ensure you are logged in."
+            )
+        
+        report_data = databricks_service.get_report_data(client_id, user_info.access_token)
         
         if not report_data:
             raise HTTPException(status_code=404, detail=f"Report data not found for client {client_id}")
@@ -196,8 +216,15 @@ async def generate_pdf(
     try:
         logger.info(f"PDF generation request from user {user_info.user_id} for client {client_id}")
         
+        # Check if user has access token (required for Databricks queries)
+        if not user_info.access_token:
+            raise HTTPException(
+                status_code=401,
+                detail="User access token not available. Please ensure you are logged in."
+            )
+        
         # Get report data
-        report_data = databricks_service.get_report_data(client_id)
+        report_data = databricks_service.get_report_data(client_id, user_info.access_token)
         
         if not report_data:
             raise HTTPException(status_code=404, detail=f"Report data not found for client {client_id}")

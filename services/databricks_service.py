@@ -3,38 +3,35 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 from databricks import sql
-from databricks.sdk.core import Config
 
 logger = logging.getLogger(__name__)
 
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
-# Lazy initialization - Config is created on first use, not at import time
-_cfg = None
+# Get configuration from environment variables
+DATABRICKS_HOST = os.getenv("DATABRICKS_HOST", "")
+DATABRICKS_WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
 
 
-def _get_config():
-    """Get Databricks Config with lazy initialization.
-    This defers Config() creation until first query, avoiding import-time errors.
+def sql_query_with_user_token(query: str, user_token: str) -> List[Dict[str, Any]]:
+    """Execute a SQL query using the user's access token.
+    This uses user authorization as per Azure Databricks Apps documentation.
+    The user's token is passed via x-forwarded-access-token header.
     """
-    global _cfg
-    if _cfg is None:
-        logger.info("Initializing Databricks Config...")
-        _cfg = Config()
-        logger.info(f"Databricks Config initialized for host: {_cfg.host}")
-    return _cfg
-
-
-def sql_query_with_service_principal(query: str) -> List[Dict[str, Any]]:
-    """Execute a SQL query and return the result as a list of dictionaries.
-    This matches the exact pattern from the working app.py.
-    """
-    cfg = _get_config()
+    # Remove https:// prefix if present for server_hostname
+    server_hostname = DATABRICKS_HOST
+    if server_hostname.startswith("https://"):
+        server_hostname = server_hostname[8:]
+    if server_hostname.startswith("http://"):
+        server_hostname = server_hostname[7:]
+    
+    logger.info(f"Connecting to Databricks: {server_hostname}, warehouse: {DATABRICKS_WAREHOUSE_ID}")
+    
     with sql.connect(
-            server_hostname=cfg.host,
-            http_path=f"/sql/1.0/warehouses/{cfg.warehouse_id}",
-            credentials_provider=lambda: cfg.authenticate
+            server_hostname=server_hostname,
+            http_path=f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}",
+            access_token=user_token
     ) as connection:
         with connection.cursor() as cursor:
             cursor.execute(query)
@@ -49,16 +46,17 @@ class DatabricksService:
     def __init__(self):
         pass
     
-    def _execute_query(self, query: str) -> List[Dict[str, Any]]:
+    def _execute_query(self, query: str, user_token: str) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results as list of dictionaries"""
         try:
-            return sql_query_with_service_principal(query)
+            return sql_query_with_user_token(query, user_token)
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
             raise
     
     def search_clients(
         self,
+        user_token: str,
         client_name: Optional[str] = None,
         client_nhi: Optional[str] = None,
         start_date: Optional[date] = None,
@@ -111,7 +109,7 @@ class DatabricksService:
         logger.info(f"Executing search query: {query}")
         
         try:
-            results = self._execute_query(query)
+            results = self._execute_query(query, user_token)
             # Convert date objects to strings for JSON serialization
             for row in results:
                 if row.get('create_date'):
@@ -124,7 +122,7 @@ class DatabricksService:
             logger.error(f"Error searching clients: {str(e)}")
             raise
     
-    def get_report_data(self, client_id: str) -> Optional[Dict[str, Any]]:
+    def get_report_data(self, client_id: str, user_token: str) -> Optional[Dict[str, Any]]:
         """
         Load report data from Databricks table by koo_clientid.
         Returns: Report data dictionary or None if not found
@@ -163,7 +161,7 @@ class DatabricksService:
         logger.info(f"Executing report query for client: {client_id}")
         
         try:
-            results = self._execute_query(query)
+            results = self._execute_query(query, user_token)
             if results:
                 return results[0]
             return None
