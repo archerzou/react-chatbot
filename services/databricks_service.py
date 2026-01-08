@@ -3,16 +3,32 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 from databricks import sql
-from databricks.sdk.core import Config
+from databricks.sdk.core import Config, oauth_service_principal
 
 logger = logging.getLogger(__name__)
 
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
-assert os.getenv('DATABRICKS_WAREHOUSE_ID'), "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
+SERVER_HOSTNAME = os.getenv("DATABRICKS_HOST")
+WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID")
+CLIENT_ID = os.getenv("DATABRICKS_CLIENT_ID")
+CLIENT_SECRET = os.getenv("DATABRICKS_CLIENT_SECRET")
 
-cfg = Config()
+assert WAREHOUSE_ID, "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
+assert SERVER_HOSTNAME, "DATABRICKS_HOST must be set in app.yaml."
+assert CLIENT_ID, "DATABRICKS_CLIENT_ID must be set in app.yaml."
+assert CLIENT_SECRET, "DATABRICKS_CLIENT_SECRET must be set in app.yaml."
+
+
+def get_credentials_provider():
+    """Create OAuth M2M credentials provider with explicit configuration"""
+    config = Config(
+        host=f"https://{SERVER_HOSTNAME}" if not SERVER_HOSTNAME.startswith("https://") else SERVER_HOSTNAME,
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET
+    )
+    return oauth_service_principal(config)
 
 
 class DatabricksService:
@@ -25,9 +41,9 @@ class DatabricksService:
         """Execute a SQL query and return results as list of dictionaries"""
         try:
             with sql.connect(
-                server_hostname=cfg.host,
-                http_path=f"/sql/1.0/warehouses/{cfg.warehouse_id}",
-                credentials_provider=lambda: cfg.authenticate
+                server_hostname=SERVER_HOSTNAME,
+                http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+                credentials_provider=get_credentials_provider
             ) as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(query)
