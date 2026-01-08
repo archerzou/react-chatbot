@@ -10,19 +10,27 @@ logger = logging.getLogger(__name__)
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
-assert os.getenv('DATABRICKS_WAREHOUSE_ID'), "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
+# Lazy initialization - Config is created on first use, not at import time
+_cfg = None
 
-cfg = Config(
-    host=os.getenv("DATABRICKS_HOST"),
-    client_id=os.getenv("DATABRICKS_CLIENT_ID"),
-    client_secret=os.getenv("DATABRICKS_CLIENT_SECRET")
-)
+
+def _get_config():
+    """Get Databricks Config with lazy initialization.
+    This defers Config() creation until first query, avoiding import-time errors.
+    """
+    global _cfg
+    if _cfg is None:
+        logger.info("Initializing Databricks Config...")
+        _cfg = Config()
+        logger.info(f"Databricks Config initialized for host: {_cfg.host}")
+    return _cfg
 
 
 def sql_query_with_service_principal(query: str) -> List[Dict[str, Any]]:
     """Execute a SQL query and return the result as a list of dictionaries.
     This matches the exact pattern from the working app.py.
     """
+    cfg = _get_config()
     with sql.connect(
             server_hostname=cfg.host,
             http_path=f"/sql/1.0/warehouses/{cfg.warehouse_id}",
