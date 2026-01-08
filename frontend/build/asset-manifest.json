@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/static/css/main.c1061398.css",
-    "main.js": "/static/js/main.c15fa076.js",
+    "main.js": "/static/js/main.95aeb814.js",
     "static/js/453.8ab44547.chunk.js": "/static/js/453.8ab44547.chunk.js",
     "static/media/databricks_text.svg": "/static/media/databricks_text.7adff03989481b9a15f527a4f5ea4ec0.svg",
     "static/media/databricks_icon.svg": "/static/media/databricks_icon.7f8dff713d627de89df799f1213de1cc.svg",
     "index.html": "/index.html",
     "main.c1061398.css.map": "/static/css/main.c1061398.css.map",
-    "main.c15fa076.js.map": "/static/js/main.c15fa076.js.map",
+    "main.95aeb814.js.map": "/static/js/main.95aeb814.js.map",
     "453.8ab44547.chunk.js.map": "/static/js/453.8ab44547.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.c1061398.css",
-    "static/js/main.c15fa076.js"
+    "static/js/main.95aeb814.js"
   ]
 }

@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, Title, Text, Group, Paper } from '@mantine/core';
-import { FileText } from 'lucide-react';
+import { Title, Text, Group, Paper, Image } from '@mantine/core';
 import UserMenu from './UserMenu';
 
 const Header: React.FC = () => {
@@ -15,19 +14,13 @@ const Header: React.FC = () => {
     >
       <Group justify="space-between" align="center">
         <Group gap="md">
-          <Box
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: '#E91E63',
-              borderRadius: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <FileText size={20} color="white" />
-          </Box>
+          <Image
+            src="/logo.png"
+            alt="Healthcare Dashboard Logo"
+            h={50}
+            w="auto"
+            fit="contain"
+          />
           <div>
             <Title order={4} style={{ margin: 0 }}>Healthcare Dashboard</Title>
             <Text size="sm" c="dimmed">Search for client records and generate reports</Text>
@@ -39,4 +32,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header;   
+export default Header;      
