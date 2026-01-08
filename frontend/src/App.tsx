@@ -1,41 +1,82 @@
 import React from 'react';
-import styled from 'styled-components';
-import { ChatProvider } from './context/ChatContext';
-import LeftComponent from './components/LeftComponent';
-import ChatArea from './components/ChatArea';
+import { MantineProvider, Container, Stack, Box, Loader, Center, Text, createTheme } from '@mantine/core';
+import { Notifications } from '@mantine/notifications';
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
+import '@mantine/notifications/styles.css';
+import { AppProvider, useApp } from './context/AppContext';
+import Header from './components/Header';
+import SearchPanel from './components/SearchPanel';
+import DataTable from './components/DataTable';
+import ReportPreview from './components/ReportPreview';
 
-// Define the props type explicitly
-interface AppContainerProps {
-  'data-testid'?: string;
-}
+const theme = createTheme({
+  primaryColor: 'pink',
+  colors: {
+    pink: [
+      '#fce4ec',
+      '#f8bbd9',
+      '#f48fb1',
+      '#f06292',
+      '#ec407a',
+      '#E91E63',
+      '#d81b60',
+      '#c2185b',
+      '#ad1457',
+      '#880e4f',
+    ],
+    cyan: [
+      '#e0f7fa',
+      '#b2ebf2',
+      '#80deea',
+      '#4dd0e1',
+      '#26c6da',
+      '#00bcd4',
+      '#0099D8',
+      '#0097a7',
+      '#00838f',
+      '#006064',
+    ],
+  },
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+});
 
-interface MainContentProps {
-  'data-testid'?: string;
-}
+const AppContent: React.FC = () => {
+  const { loading } = useApp();
 
-const AppContainer = styled.div<AppContainerProps>`
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-`;
+  if (loading) {
+    return (
+      <Center style={{ height: '100vh' }}>
+        <Stack align="center" gap="md">
+          <Loader size="xl" color="pink" />
+          <Text c="dimmed">Loading...</Text>
+        </Stack>
+      </Center>
+    );
+  }
 
-const MainContent = styled.div<MainContentProps>`
-  display: flex;
-  height: 100vh;
-  position: relative;
-`;
+  return (
+    <Box style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Header />
+      <Container size="xl" py="md">
+        <Stack gap="md">
+          <SearchPanel />
+          <DataTable />
+          <ReportPreview />
+        </Stack>
+      </Container>
+    </Box>
+  );
+};
 
 const App: React.FC = () => {
   return (
-    <ChatProvider>
-      <AppContainer data-testid="app-container">
-        <MainContent data-testid="main-content">
-          <LeftComponent />
-          <ChatArea />
-        </MainContent>
-      </AppContainer>
-    </ChatProvider>
+    <MantineProvider theme={theme}>
+      <Notifications position="top-right" />
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </MantineProvider>
   );
 };
 
