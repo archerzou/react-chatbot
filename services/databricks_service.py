@@ -7,7 +7,6 @@ from databricks.sdk.core import Config
 
 logger = logging.getLogger(__name__)
 
-# Table configuration
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
@@ -21,12 +20,17 @@ class DatabricksService:
         self._config = None
         
         if not self.warehouse_id:
-            logger.warning("DATABRICKS_WAREHOUSE_ID not set - using mock data for development")
+            logger.warning("DATABRICKS_WAREHOUSE_ID not set - service will return empty results")
     
     def _get_config(self) -> Config:
-        """Get Databricks configuration (lazy initialization)"""
+        """Get Databricks configuration with lazy initialization to avoid import-time errors"""
         if self._config is None:
-            self._config = Config()
+            try:
+                self._config = Config()
+                logger.info(f"Databricks Config initialized successfully for host: {self._config.host}")
+            except ValueError as e:
+                logger.error(f"Failed to initialize Databricks Config: {e}")
+                raise
         return self._config
     
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
