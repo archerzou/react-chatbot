@@ -1,9 +1,7 @@
 import React from 'react';
-import { Avatar, Menu, Group, Text, UnstyledButton } from '@mantine/core';
+import { Avatar, Menu, Text, UnstyledButton } from '@mantine/core';
 import { LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import databricksLogo from '../assets/images/databricks_icon.svg';
-import databricksText from '../assets/images/databricks_text.svg';
 
 const UserMenu: React.FC = () => {
   const { userInfo, logout } = useApp();
@@ -24,13 +22,7 @@ const UserMenu: React.FC = () => {
   };
 
   return (
-    <Group justify="space-between" style={{ width: '100%' }}>
-      <Group gap="xs">
-        <img src={databricksLogo} alt="Databricks Logo" style={{ height: 20 }} />
-        <img src={databricksText} alt="Databricks" style={{ height: 14 }} />
-      </Group>
-      
-      <Menu shadow="md" width={200} position="bottom-end">
+    <Menu shadow="md" width={200} position="bottom-end">
         <Menu.Target>
           <UnstyledButton>
             <Avatar color="indigo" radius="xl" size="sm">
@@ -49,9 +41,8 @@ const UserMenu: React.FC = () => {
             Log out
           </Menu.Item>
         </Menu.Dropdown>
-      </Menu>
-    </Group>
+    </Menu>
   );
 };
 
-export default UserMenu;     
+export default UserMenu;         
