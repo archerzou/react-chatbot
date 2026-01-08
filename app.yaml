@@ -7,5 +7,7 @@ command:
   - "uvicorn.workers.UvicornWorker"
 
 env:
-  - name: "SERVING_ENDPOINT_NAME"
-    valueFrom: "serving_endpoint" 
+  - name: "DATABRICKS_HOST"
+    value: "adb-1108746899088703.3.azuredatabricks.net"
+  - name: "DATABRICKS_WAREHOUSE_ID"
+    value: "6880e1544b69181f"   
