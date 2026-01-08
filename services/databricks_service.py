@@ -3,32 +3,36 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 from databricks import sql
-from databricks.sdk.core import Config, oauth_service_principal
+from databricks.sdk.core import Config
 
 logger = logging.getLogger(__name__)
 
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
-SERVER_HOSTNAME = os.getenv("DATABRICKS_HOST")
-WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID")
-CLIENT_ID = os.getenv("DATABRICKS_CLIENT_ID")
-CLIENT_SECRET = os.getenv("DATABRICKS_CLIENT_SECRET")
+assert os.getenv('DATABRICKS_WAREHOUSE_ID'), "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
 
-assert WAREHOUSE_ID, "DATABRICKS_WAREHOUSE_ID must be set in app.yaml."
-assert SERVER_HOSTNAME, "DATABRICKS_HOST must be set in app.yaml."
-assert CLIENT_ID, "DATABRICKS_CLIENT_ID must be set in app.yaml."
-assert CLIENT_SECRET, "DATABRICKS_CLIENT_SECRET must be set in app.yaml."
+cfg = Config(
+    host=os.getenv("DATABRICKS_HOST"),
+    client_id=os.getenv("DATABRICKS_CLIENT_ID"),
+    client_secret=os.getenv("DATABRICKS_CLIENT_SECRET")
+)
 
 
-def get_credentials_provider():
-    """Create OAuth M2M credentials provider with explicit configuration"""
-    config = Config(
-        host=f"https://{SERVER_HOSTNAME}" if not SERVER_HOSTNAME.startswith("https://") else SERVER_HOSTNAME,
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET
-    )
-    return oauth_service_principal(config)
+def sql_query_with_service_principal(query: str) -> List[Dict[str, Any]]:
+    """Execute a SQL query and return the result as a list of dictionaries.
+    This matches the exact pattern from the working app.py.
+    """
+    with sql.connect(
+            server_hostname=cfg.host,
+            http_path=f"/sql/1.0/warehouses/{cfg.warehouse_id}",
+            credentials_provider=lambda: cfg.authenticate
+    ) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
 
 
 class DatabricksService:
@@ -40,16 +44,7 @@ class DatabricksService:
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results as list of dictionaries"""
         try:
-            with sql.connect(
-                server_hostname=SERVER_HOSTNAME,
-                http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-                credentials_provider=get_credentials_provider
-            ) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(query)
-                    columns = [desc[0] for desc in cursor.description]
-                    rows = cursor.fetchall()
-                    return [dict(zip(columns, row)) for row in rows]
+            return sql_query_with_service_principal(query)
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
             raise
