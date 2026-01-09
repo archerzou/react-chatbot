@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
 from databricks import sql
-from databricks.sdk.core import Config, oauth_service_principal
+from databricks.sdk.core import Config
 
 logger = logging.getLogger(__name__)
 
@@ -11,53 +11,44 @@ logger = logging.getLogger(__name__)
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
-# Get environment variables
+# Get warehouse ID from environment
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
-DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST")
-DATABRICKS_CLIENT_ID = os.environ.get("DATABRICKS_CLIENT_ID")
-DATABRICKS_CLIENT_SECRET = os.environ.get("DATABRICKS_CLIENT_SECRET")
+
+# Lazy initialization of Databricks config to avoid import-time failures
+_databricks_cfg = None
 
 
-def _get_credentials_provider():
+def _get_databricks_config() -> Config:
     """
-    Get OAuth M2M credentials provider for service principal authentication.
-    Following the official Databricks SQL Python example:
-    https://github.com/databricks/databricks-sql-python/blob/main/examples/m2m_oauth.py
+    Get Databricks configuration with lazy initialization.
+    The SDK automatically detects credentials from environment variables
+    (DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET)
+    which are injected by Databricks Apps for service principal authentication.
     """
-    if not DATABRICKS_HOST:
-        raise ValueError("DATABRICKS_HOST environment variable is not set")
-    
-    host = DATABRICKS_HOST
-    if not host.startswith("https://"):
-        host = f"https://{host}"
-    
-    config = Config(
-        host=host,
-        client_id=DATABRICKS_CLIENT_ID,
-        client_secret=DATABRICKS_CLIENT_SECRET,
-    )
-    return oauth_service_principal(config)
+    global _databricks_cfg
+    if _databricks_cfg is None:
+        _databricks_cfg = Config()
+    return _databricks_cfg
 
 
 def get_connection():
     """
     Get a connection to Databricks SQL Warehouse.
-    Using OAuth M2M (machine-to-machine) authentication for service principal.
+    Following the official Databricks Apps cookbook pattern:
+    https://apps-cookbook.dev/docs/fastapi/building_endpoints/tables_read
+    
+    The SDK automatically handles authentication using credentials from
+    environment variables injected by Databricks Apps.
     """
     if not DATABRICKS_WAREHOUSE_ID:
         raise ValueError("DATABRICKS_WAREHOUSE_ID environment variable is not set")
-    if not DATABRICKS_HOST:
-        raise ValueError("DATABRICKS_HOST environment variable is not set")
     
-    server_hostname = DATABRICKS_HOST
-    if server_hostname.startswith("https://"):
-        server_hostname = server_hostname.replace("https://", "")
-    
+    cfg = _get_databricks_config()
     http_path = f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}"
     return sql.connect(
-        server_hostname=server_hostname,
+        server_hostname=cfg.host,
         http_path=http_path,
-        credentials_provider=_get_credentials_provider,
+        credentials_provider=lambda: cfg.authenticate,
     )
 
 
