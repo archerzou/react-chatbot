@@ -11,23 +11,39 @@ logger = logging.getLogger(__name__)
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
+# Get warehouse ID from environment (following Databricks Apps cookbook pattern)
+DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
+
+# Initialize Databricks config at module level (following official cookbook pattern)
+# This uses the native Databricks App authentication when running as a Databricks App
+databricks_cfg = Config()
+
+
+def get_connection():
+    """
+    Get a connection to Databricks SQL Warehouse.
+    Following the official Databricks Apps cookbook pattern:
+    https://apps-cookbook.dev/docs/fastapi/building_endpoints/tables_read
+    """
+    if not DATABRICKS_WAREHOUSE_ID:
+        raise ValueError("DATABRICKS_WAREHOUSE_ID environment variable is not set")
+    
+    http_path = f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}"
+    return sql.connect(
+        server_hostname=databricks_cfg.host,
+        http_path=http_path,
+        credentials_provider=lambda: databricks_cfg.authenticate,
+    )
+
 
 class DatabricksService:
     """Service for handling all Databricks SQL Warehouse queries"""
     
     def __init__(self):
-        self.host = os.getenv("DATABRICKS_HOST")
-        self.warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
-        self._config = None
+        self.warehouse_id = DATABRICKS_WAREHOUSE_ID
         
         if not self.warehouse_id:
             logger.warning("DATABRICKS_WAREHOUSE_ID not set - using mock data for development")
-    
-    def _get_config(self) -> Config:
-        """Get Databricks configuration (lazy initialization)"""
-        if self._config is None:
-            self._config = Config()
-        return self._config
     
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results as list of dictionaries"""
@@ -36,17 +52,15 @@ class DatabricksService:
             return []
         
         try:
-            cfg = self._get_config()
-            with sql.connect(
-                server_hostname=cfg.host,
-                http_path=f"/sql/1.0/warehouses/{self.warehouse_id}",
-                credentials_provider=lambda: cfg.authenticate
-            ) as connection:
-                with connection.cursor() as cursor:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
                     cursor.execute(query)
                     columns = [desc[0] for desc in cursor.description]
                     rows = cursor.fetchall()
                     return [dict(zip(columns, row)) for row in rows]
+            finally:
+                conn.close()
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
             raise
