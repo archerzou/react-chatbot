@@ -1,46 +1,70 @@
 import os
 import logging
+from datetime import date, datetime, timedelta
 from typing import Optional, List, Dict, Any
-from datetime import date
+
+import requests
 from databricks import sql
-from databricks.sdk.core import Config
 
 logger = logging.getLogger(__name__)
 
-# Table configuration
 TABLE_NAME_SEARCH = "dev_structured.analytics.measureresponses_cleaned"
 TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 
 
 class DatabricksService:
-    """Service for handling all Databricks SQL Warehouse queries"""
+    """Service for handling Databricks SQL Warehouse queries using OAuth authentication."""
     
     def __init__(self):
-        self.host = os.getenv("DATABRICKS_HOST")
-        self.warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
-        self._config = None
+        self.host = os.getenv("DATABRICKS_HOST", "")
+        self.warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
+        self.client_id = os.getenv("DATABRICKS_CLIENT_ID", "")
+        self.client_secret = os.getenv("DATABRICKS_CLIENT_SECRET", "")
+        self._token: Optional[str] = None
+        self._token_expires_at: Optional[datetime] = None
         
         if not self.warehouse_id:
             logger.warning("DATABRICKS_WAREHOUSE_ID not set - using mock data for development")
     
-    def _get_config(self) -> Config:
-        """Get Databricks configuration (lazy initialization)"""
-        if self._config is None:
-            self._config = Config()
-        return self._config
+    def _get_hostname(self) -> str:
+        """Extract hostname without protocol."""
+        return self.host.replace("https://", "").replace("http://", "")
+    
+    def _get_access_token(self) -> str:
+        """Get OAuth access token using service principal credentials with caching."""
+        if self._token and self._token_expires_at and datetime.now() < self._token_expires_at:
+            return self._token
+        
+        token_url = f"https://{self._get_hostname()}/oidc/v1/token"
+        
+        response = requests.post(
+            token_url,
+            auth=(self.client_id, self.client_secret),
+            data={"grant_type": "client_credentials", "scope": "all-apis"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        token_data = response.json()
+        self._token = token_data["access_token"]
+        expires_in = token_data.get("expires_in", 3600)
+        self._token_expires_at = datetime.now() + timedelta(seconds=expires_in - 300)
+        
+        logger.info("Successfully obtained Databricks access token")
+        return self._token
     
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
-        """Execute a SQL query and return results as list of dictionaries"""
+        """Execute a SQL query and return results as list of dictionaries."""
         if not self.warehouse_id:
             logger.warning("No warehouse ID configured - returning empty results")
             return []
         
         try:
-            cfg = self._get_config()
             with sql.connect(
-                server_hostname=cfg.host,
+                server_hostname=self._get_hostname(),
                 http_path=f"/sql/1.0/warehouses/{self.warehouse_id}",
-                credentials_provider=lambda: cfg.authenticate
+                access_token=self._get_access_token()
             ) as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(query)
