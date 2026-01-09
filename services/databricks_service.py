@@ -1,5 +1,6 @@
 import os
 import logging
+from functools import lru_cache
 from typing import Optional, List, Dict, Any
 from datetime import date
 from databricks import sql
@@ -14,42 +15,31 @@ TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 # Get warehouse ID from environment
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
 
-# Lazy initialization of Databricks config to avoid import-time failures
-_databricks_cfg = None
+# Use Databricks SDK Config for authentication
+# In Databricks Apps, auth is handled automatically
+cfg = Config()
 
 
-def _get_databricks_config() -> Config:
+@lru_cache(maxsize=1)
+def get_connection(warehouse_id: str):
     """
-    Get Databricks configuration with lazy initialization.
-    The SDK automatically detects credentials from environment variables
-    (DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET)
-    which are injected by Databricks Apps for service principal authentication.
+    Get or create a connection to the Databricks SQL warehouse.
+    Connection is cached using lru_cache to avoid creating multiple connections.
     """
-    global _databricks_cfg
-    if _databricks_cfg is None:
-        _databricks_cfg = Config()
-    return _databricks_cfg
-
-
-def get_connection():
-    """
-    Get a connection to Databricks SQL Warehouse.
-    Following the official Databricks Apps cookbook pattern:
-    https://apps-cookbook.dev/docs/fastapi/building_endpoints/tables_read
-    
-    The SDK automatically handles authentication using credentials from
-    environment variables injected by Databricks Apps.
-    """
-    if not DATABRICKS_WAREHOUSE_ID:
-        raise ValueError("DATABRICKS_WAREHOUSE_ID environment variable is not set")
-    
-    cfg = _get_databricks_config()
-    http_path = f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}"
+    http_path = f"/sql/1.0/warehouses/{warehouse_id}"
     return sql.connect(
         server_hostname=cfg.host,
         http_path=http_path,
         credentials_provider=lambda: cfg.authenticate,
     )
+
+
+def close_connections():
+    """
+    Close all open connections.
+    This should be called when shutting down the application.
+    """
+    get_connection.cache_clear()
 
 
 class DatabricksService:
@@ -68,15 +58,12 @@ class DatabricksService:
             return []
         
         try:
-            conn = get_connection()
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute(query)
-                    columns = [desc[0] for desc in cursor.description]
-                    rows = cursor.fetchall()
-                    return [dict(zip(columns, row)) for row in rows]
-            finally:
-                conn.close()
+            conn = get_connection(self.warehouse_id)
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+                return [dict(zip(columns, row)) for row in rows]
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
             raise
