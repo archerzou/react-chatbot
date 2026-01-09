@@ -14,9 +14,20 @@ TABLE_NAME_REPORT = "dev_structured.analytics.measureresponses_ai_final"
 # Get warehouse ID from environment (following Databricks Apps cookbook pattern)
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
 
-# Initialize Databricks config at module level (following official cookbook pattern)
-# This uses the native Databricks App authentication when running as a Databricks App
-databricks_cfg = Config()
+# Lazy initialization of Databricks config to avoid import-time failures
+_databricks_cfg = None
+
+
+def _get_databricks_config() -> Config:
+    """
+    Get Databricks configuration with lazy initialization.
+    This allows the app to start even if credentials aren't immediately available,
+    and only fails when actually trying to execute a query.
+    """
+    global _databricks_cfg
+    if _databricks_cfg is None:
+        _databricks_cfg = Config()
+    return _databricks_cfg
 
 
 def get_connection():
@@ -28,11 +39,12 @@ def get_connection():
     if not DATABRICKS_WAREHOUSE_ID:
         raise ValueError("DATABRICKS_WAREHOUSE_ID environment variable is not set")
     
+    cfg = _get_databricks_config()
     http_path = f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}"
     return sql.connect(
-        server_hostname=databricks_cfg.host,
+        server_hostname=cfg.host,
         http_path=http_path,
-        credentials_provider=lambda: databricks_cfg.authenticate,
+        credentials_provider=lambda: cfg.authenticate,
     )
 
 
