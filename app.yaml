@@ -4,4 +4,8 @@ command:
   - "-w"
   - "2"
   - "--worker-class"
-  - "uvicorn.workers.UvicornWorker"      
+  - "uvicorn.workers.UvicornWorker"
+
+env:
+  - name: "DATABRICKS_WAREHOUSE_ID"
+    value: "9b074b7ee163b794"               
