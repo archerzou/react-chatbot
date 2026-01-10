@@ -11,8 +11,55 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Flowable
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 logger = logging.getLogger(__name__)
+
+FONT_NAME = "DejaVuSans"
+FONT_NAME_BOLD = "DejaVuSans-Bold"
+FONT_PATHS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+]
+FONT_BOLD_PATHS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+]
+
+
+def _register_unicode_fonts():
+    """Register DejaVu Sans fonts for Unicode support (including Maori characters)."""
+    font_registered = False
+    bold_registered = False
+    
+    for path in FONT_PATHS:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont(FONT_NAME, path))
+                font_registered = True
+                break
+            except Exception as e:
+                logger.warning(f"Failed to register font from {path}: {e}")
+    
+    for path in FONT_BOLD_PATHS:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont(FONT_NAME_BOLD, path))
+                bold_registered = True
+                break
+            except Exception as e:
+                logger.warning(f"Failed to register bold font from {path}: {e}")
+    
+    if not font_registered:
+        logger.warning("DejaVu Sans font not found - falling back to Helvetica (Maori characters may not display)")
+    if not bold_registered:
+        logger.warning("DejaVu Sans Bold font not found - falling back to Helvetica-Bold")
+    
+    return font_registered, bold_registered
+
+
+_fonts_registered = _register_unicode_fonts()
 
 
 def safe_str(value: Any) -> str:
@@ -115,10 +162,13 @@ class PDFService:
         
         styles = getSampleStyleSheet()
         
-        # Custom styles
+        font_name = FONT_NAME if _fonts_registered[0] else 'Helvetica'
+        font_name_bold = FONT_NAME_BOLD if _fonts_registered[1] else 'Helvetica-Bold'
+        
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
+            fontName=font_name_bold,
             fontSize=16,
             textColor=colors.HexColor("#0099D8"),
             spaceAfter=6,
@@ -128,6 +178,7 @@ class PDFService:
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Normal'],
+            fontName=font_name,
             fontSize=10,
             textColor=colors.HexColor("#666666"),
             spaceAfter=12
@@ -136,6 +187,7 @@ class PDFService:
         section_header_style = ParagraphStyle(
             'SectionHeader',
             parent=styles['Heading2'],
+            fontName=font_name_bold,
             fontSize=12,
             textColor=colors.HexColor("#0099D8"),
             spaceBefore=14,
@@ -146,6 +198,7 @@ class PDFService:
         subsection_style = ParagraphStyle(
             'SubSection',
             parent=styles['Heading3'],
+            fontName=font_name_bold,
             fontSize=10,
             textColor=colors.HexColor("#444444"),
             spaceBefore=10,
@@ -155,6 +208,7 @@ class PDFService:
         body_style = ParagraphStyle(
             'CustomBody',
             parent=styles['Normal'],
+            fontName=font_name,
             fontSize=10,
             textColor=colors.HexColor("#333333"),
             spaceAfter=8,
@@ -164,6 +218,7 @@ class PDFService:
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
+            fontName=font_name,
             fontSize=9,
             textColor=colors.HexColor("#999999"),
             alignment=TA_RIGHT,
@@ -213,14 +268,14 @@ class PDFService:
         
         client_info_table = Table(client_info_data, colWidths=[3.2 * cm, 5.5 * cm, 3.8 * cm, 5.5 * cm])
         client_info_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor("#666666")),
             ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor("#666666")),
             ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor("#333333")),
             ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor("#333333")),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (3, 0), (3, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), font_name_bold),
+            ('FONTNAME', (3, 0), (3, -1), font_name_bold),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),

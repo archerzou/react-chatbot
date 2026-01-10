@@ -1,6 +1,6 @@
-# Healthcare Dashboard
+# Healthcare Report
 
-A production-ready healthcare dashboard application that enables nurses to search client records and generate professional PDF reports. Built with React + FastAPI on Databricks.
+A production-ready healthcare report application that enables nurses to search client records and generate professional PDF reports. Built with React + FastAPI on Databricks.
 
 ## Overview
 

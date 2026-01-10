@@ -73,9 +73,9 @@ pdf_service = PDFService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Healthcare Dashboard API")
+    logger.info("Starting Healthcare Report API")
     yield
-    logger.info("Shutting down Healthcare Dashboard API")
+    logger.info("Shutting down Healthcare Report API")
 
 app = FastAPI(lifespan=lifespan)
 api_app = FastAPI()
@@ -119,7 +119,7 @@ async def get_user_info(request: Request) -> UserInfo:
 # API Routes
 @api_app.get("/")
 async def root():
-    return {"message": "Healthcare Dashboard API is running"}
+    return {"message": "Healthcare Report API is running"}
 
 @api_app.get("/login")
 async def login(user_info: UserInfo = Depends(get_user_info)):
