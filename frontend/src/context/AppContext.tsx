@@ -10,6 +10,7 @@ interface AppContextType {
   loading: boolean;
   searchLoading: boolean;
   reportLoading: boolean;
+  hasSearched: boolean;
   error: string | null;
   search: (filters: SearchFilters) => Promise<void>;
   selectClient: (client: ClientSearchResult | null) => void;
@@ -30,6 +31,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [reportLoading, setReportLoading] = useState<boolean>(false);
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,9 +59,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await searchClients(filters);
       setSearchResults(response.results);
-      if (response.results.length === 0) {
-        setError('No records found. Try adjusting your search criteria.');
-      }
+      setHasSearched(true);
     } catch (err: any) {
       console.error('Search error:', err);
       const errorMessage = err.response?.data?.detail || 'Failed to search clients';
@@ -129,6 +129,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSearchResults([]);
     setSelectedClient(null);
     setReportData(null);
+    setHasSearched(false);
   };
 
   return (
@@ -141,6 +142,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         loading,
         searchLoading,
         reportLoading,
+        hasSearched,
         error,
         search,
         selectClient,
