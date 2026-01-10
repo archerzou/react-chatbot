@@ -16,13 +16,13 @@ const Header: React.FC = () => {
         <Group gap="md">
           <Image
             src="/logo.png"
-            alt="Healthcare Dashboard Logo"
+            alt="Healthcare Report Logo"
             h={50}
             w="auto"
             fit="contain"
           />
           <div>
-            <Title order={4} style={{ margin: 0 }}>Healthcare Dashboard</Title>
+            <Title order={4} style={{ margin: 0 }}>Healthcare Report</Title>
             <Text size="sm" c="dimmed">Search for client records and generate reports</Text>
           </div>
         </Group>
