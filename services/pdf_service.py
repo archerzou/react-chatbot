@@ -262,7 +262,7 @@ class PDFService:
             ['Client Name:', client_name, 'Client NHI:', client_nhi],
             ['DHB:', dhb, 'Ethnicity:', ethnicity],
             ['Domicile:', domicile, 'Gender:', gender],
-            ['Primary Caregiver:', primary_caregiver, 'Well Child Level of Need:', well_child_level_of_need],
+            ['aregiver:', primary_caregiver, 'Need Level:', well_child_level_of_need],
             ['Generated:', datetime.now().strftime('%Y-%m-%d %H:%M'), '', '']
         ]
         

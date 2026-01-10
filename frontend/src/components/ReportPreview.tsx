@@ -96,7 +96,7 @@ const ReportPreview: React.FC = () => {
               <Text fw={500}>{safeStr(reportData.primary_caregiver)}</Text>
             </Grid.Col>
             <Grid.Col span={6}>
-              <Text size="sm" c="dimmed">Need Level</Text>
+              <Text size="sm" c="dimmed">Well Child Level of Need</Text>
               <Text fw={500}>{safeStr(reportData.well_child_level_of_need)}</Text>
             </Grid.Col>
           </Grid>
