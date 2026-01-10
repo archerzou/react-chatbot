@@ -266,20 +266,19 @@ class PDFService:
             ['Generated:', datetime.now().strftime('%Y-%m-%d %H:%M'), '', '']
         ]
         
-        client_info_table = Table(client_info_data, colWidths=[3.2 * cm, 5.5 * cm, 3.8 * cm, 5.5 * cm])
+        client_info_table = Table(client_info_data, colWidths=[3.2 * cm, 5.0 * cm, 4.3 * cm, 5.5 * cm])
         client_info_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor("#666666")),
             ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor("#666666")),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor("#333333")),
-            ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor("#333333")),
-            ('FONTNAME', (1, 0), (1, -1), font_name_bold),
-            ('FONTNAME', (3, 0), (3, -1), font_name_bold),
+            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor("#000000")),
+            ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor("#000000")),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
             ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (1, 0), (1, -1), 24),
         ]))
         story.append(client_info_table)
         story.append(Spacer(1, 12))

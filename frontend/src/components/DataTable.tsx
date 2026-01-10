@@ -3,6 +3,7 @@ import { Paper, Table, Radio, Button, Group, Text, ScrollArea, Stack, Alert } fr
 import { FileText, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ClientSearchResult } from '../types';
+import NotFound from './NotFound';
 
 const DataTable: React.FC = () => {
   const { 
@@ -11,6 +12,7 @@ const DataTable: React.FC = () => {
     selectClient, 
     loadReportData, 
     reportLoading,
+    hasSearched,
     error 
   } = useApp();
 
@@ -23,6 +25,10 @@ const DataTable: React.FC = () => {
       await loadReportData(selectedClient.koo_clientid);
     }
   };
+
+  if (searchResults.length === 0 && hasSearched) {
+    return <NotFound />;
+  }
 
   if (searchResults.length === 0) {
     return null;
