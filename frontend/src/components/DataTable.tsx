@@ -81,9 +81,9 @@ const DataTable: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {paginatedResults.map((client) => (
+              {paginatedResults.map((client, index) => (
                 <Table.Tr 
-                  key={client.koo_clientid}
+                  key={`${client.koo_clientid}-${startIndex + index}`}
                   style={{ 
                     cursor: 'pointer',
                     backgroundColor: selectedClient?.koo_clientid === client.koo_clientid 
