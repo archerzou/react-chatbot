@@ -1,9 +1,11 @@
-import React from 'react';
-import { Paper, Table, Radio, Button, Group, Text, ScrollArea, Stack, Alert } from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Paper, Table, Radio, Button, Group, Text, ScrollArea, Stack, Alert, Pagination } from '@mantine/core';
 import { FileText, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ClientSearchResult } from '../types';
 import NotFound from './NotFound';
+
+const PAGE_SIZE = 10;
 
 const DataTable: React.FC = () => {
   const { 
@@ -15,6 +17,16 @@ const DataTable: React.FC = () => {
     hasSearched,
     error 
   } = useApp();
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchResults]);
+
+  const totalPages = Math.ceil(searchResults.length / PAGE_SIZE);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedResults = searchResults.slice(startIndex, startIndex + PAGE_SIZE);
 
   const handleRowSelect = (client: ClientSearchResult) => {
     selectClient(client);
@@ -69,7 +81,7 @@ const DataTable: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {searchResults.map((client) => (
+              {paginatedResults.map((client) => (
                 <Table.Tr 
                   key={client.koo_clientid}
                   style={{ 
@@ -109,6 +121,16 @@ const DataTable: React.FC = () => {
             </Table.Tbody>
           </Table>
         </ScrollArea>
+
+        {searchResults.length > PAGE_SIZE && (
+          <Group justify="flex-end">
+            <Pagination
+              total={totalPages}
+              value={currentPage}
+              onChange={setCurrentPage}
+            />
+          </Group>
+        )}
       </Stack>
     </Paper>
   );
