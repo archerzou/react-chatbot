@@ -262,11 +262,11 @@ class PDFService:
             ['Client Name:', client_name, 'Client NHI:', client_nhi],
             ['DHB:', dhb, 'Ethnicity:', ethnicity],
             ['Domicile:', domicile, 'Gender:', gender],
-            ['aregiver:', primary_caregiver, 'Need Level:', well_child_level_of_need],
+            ['Caregiver:', primary_caregiver, 'Need Level:', well_child_level_of_need],
             ['Generated:', datetime.now().strftime('%Y-%m-%d %H:%M'), '', '']
         ]
-        
-        client_info_table = Table(client_info_data, colWidths=[3.2 * cm, 5.0 * cm, 4.3 * cm, 5.5 * cm])
+
+        client_info_table = Table(client_info_data, colWidths=[2.8 * cm, 6.2 * cm, 2.5 * cm, 6.5 * cm])
         client_info_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
@@ -277,8 +277,8 @@ class PDFService:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-            ('RIGHTPADDING', (1, 0), (1, -1), 24),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         story.append(client_info_table)
         story.append(Spacer(1, 12))
